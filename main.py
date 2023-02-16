@@ -25,3 +25,21 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
     except WebSocketDisconnect:
         manager.disconnect(websocket)
         await manager.broadcast(f"Client {client_id} left the chat")
+
+
+@app.get("/{client_id}/{receiver_id}")
+async def get(request: Request, client_id: str, receiver_id: str):
+    return templates.TemplateResponse("chat.html", {"request": request, "client_id": client_id, "receiver_id": receiver_id})
+
+
+@app.websocket("/ws/{client_id}/{receiver_id}")
+async def websocket_endpoint(websocket: WebSocket, client_id: str, receiver_id: str):
+    await manager.connect(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            await manager.send_personal_message(f"You wrote: {data}", websocket)
+            await manager.broadcast(f"{client_id} send: {data}", receiver_id)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+        await manager.broadcast(f"Client {client_id} left the chat")
